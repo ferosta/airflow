@@ -2,6 +2,7 @@ from datetime import datetime
 import psycopg2
 import pandas as pd
 import random
+import os.path
 
 from airflow.models import Variable
 from airflow import DAG
@@ -51,6 +52,44 @@ def two_random_numbers ():
     a = random.randint(0, 10)
     b = random.randint(0, 10)
     print(f"а. Два случайных числа: {a} и {b}")
+
+# file = "./dags/file.txt"
+file = Variable.get("txt_path")
+
+def two_rnd_2file():
+    """c. Если запуск произошел успешно, попробуйте изменить логику вашего Python-оператора 
+    следующим образом – сгенерированные числа должны записываться в текстовый файл – через пробел.
+     При этом должно соблюдаться условие, что каждые новые два числа должны записываться 
+     с новой строки не затирая предыдущие."""
+
+    debug = False
+
+    # file = r"file.txt"
+    a = random.randint(-100, 100)
+    b = random.randint(-100, 100)
+    if debug : print(a,b)
+
+    # строка для добавления
+    df_new = pd.DataFrame(data = [[a,b]], columns=[0,1])
+    if debug : print("новый фрейм\n", df_new)
+
+    # если файла не будет, то заменим его этой пустой таблицей
+    df = pd.DataFrame(columns=[0, 1])
+    if debug : print("пустрой фрейм\n", df)
+
+    # открываем файл
+    if os.path.isfile(file):
+        if debug : print(f"Opening {file}")
+        df = pd.read_csv(file, sep=" ",header=None, index_col=None  )
+        # df.columns=["a","b"]
+        if debug : print("Прочитали из файла: \n", df)
+    else:
+        print(f"нет файла {file}")
+
+    # df.append({"a":a,"b":b}, ignore_index=True)
+    df1=pd.concat([df, df_new])
+    if debug : print ("сохраняем в файл вот это:\n",df1)
+    df1.to_csv(file, sep=" ", index=False, header= False)
 	
 
 # def connect_to_psql(**kwargs):
@@ -106,7 +145,7 @@ def two_random_numbers ():
 #         return "inaccurate"
 
 # A DAG represents a workflow, a collection of tasks
-with DAG(dag_id="new_dag", start_date=datetime(2022, 1, 1), schedule="*/1 * * * *") as dag:
+with DAG(dag_id="new_dag", start_date=datetime(2022, 1, 1), schedule="*/1 * * * *", max_active_runs=5 ) as dag:
     
     # accurate = DummyOperator(
     #     task_id = 'accurate'
@@ -120,6 +159,7 @@ with DAG(dag_id="new_dag", start_date=datetime(2022, 1, 1), schedule="*/1 * * * 
     python_task = PythonOperator(task_id="world", python_callable = hello, do_xcom_push=False)
     python_task1 = PythonOperator(task_id="read_csv", python_callable = read_csv, do_xcom_push=True)
     python_task2 = PythonOperator(task_id="two_random_numbers", python_callable = two_random_numbers, do_xcom_push=False)
+    python_task3 = PythonOperator(task_id="two_rnd_2file", python_callable = two_rnd_2file, do_xcom_push=False)
     # conn_to_psql_tsk = PythonOperator(task_id="conn_to_psql", python_callable = connect_to_psql)
     # read_from_psql_tsk = PythonOperator(task_id="read_from_psql", python_callable = read_from_psql)
 
@@ -145,4 +185,4 @@ with DAG(dag_id="new_dag", start_date=datetime(2022, 1, 1), schedule="*/1 * * * 
     # bash_task >> python_task >> python_task1 >> conn_to_psql_tsk >> read_from_psql_tsk >> sql_sensor \
     #     >> bash_task2 >> choose_best_model >> [accurate, inaccurate]
 
-    bash_task >> python_task >> python_task1 >> python_task2
+    bash_task >> python_task >> python_task1 >> python_task2 >> python_task3
