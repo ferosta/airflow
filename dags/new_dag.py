@@ -92,6 +92,109 @@ def two_rnd_2file():
     df1.to_csv(file, sep=" ", index=False, header= False)
 	
 
+def two_rnd_2file_subtotal():
+    """d. Создайте новый оператор, который подключается к файлу 
+    и вычисляет сумму всех чисел из первой колонки, 
+    затем сумму всех чисел из второй колонки 
+    и рассчитывает разность полученных сумм. 
+    Вычисленную разность необходимо записать в конец того же файла, не затирая его содержимого."""
+
+    debug = False
+
+    file = r"./dags/file_12d.txt"
+    a = random.randint(-100, 100)
+    b = random.randint(-100, 100)
+    if debug : print(a,b)
+
+    # строка для добавления
+    df_new = pd.DataFrame(data = [[a,b]], columns=[0,1])
+    if debug : print("новый фрейм\n", df_new)
+
+    # если файла не будет, то заменим его этой пустой таблицей
+    df = pd.DataFrame(columns=[0, 1])
+    if debug : print("пустрой фрейм\n", df)
+
+    # открываем файл
+    if os.path.isfile(file):
+        if debug : print(f"Opening {file}")
+        df = pd.read_csv(file, sep=" ",header=None, index_col=None  )
+        # df.columns=["a","b"]
+        if debug : print("Прочитали из файла: \n", df)
+        # # это, оказывается надо было для следующей задачи
+        # #удалить последнюю строчку с разностью сумм
+        # df = df.drop(index=df.index[-1])
+        # if debug : print("Удалили последнюю строку: \n", df)
+    else:
+        print(f"нет файла {file}")
+
+    # df.append({"a":a,"b":b}, ignore_index=True)
+    df1=pd.concat([df, df_new])
+    if debug : print ("Получилась такая таблица:\n",df1)
+
+    # расчет сумм
+    sum0 = df1[0].sum()
+    sum1 = df1[1].sum()
+    delt = sum0 - sum1
+    if debug : print(f"Сумма0 {sum0},  Сумма1 {sum1} , разница {delt}")
+    #вставляем в таблицу строку с разностью сумм 
+    df_new = pd.DataFrame(data = [[delt,""]], columns=[0,1])
+    df1=pd.concat([df1, df_new])
+
+    if debug : print ("сохраняем в файл вот это:\n",df1)
+    df1.to_csv(file, sep=" ", index=False, header= False)
+
+
+
+def two_rnd_2file_subtotal_del():
+    """e. Измените еще раз логику вашего оператора из пунктов 12.а – 12.с. 
+    При каждой новой записи произвольных чисел в конец файла, 
+    вычисленная сумма на шаге 12.d должна затираться."""
+
+    debug = False
+
+    file = r"./dags/file_12e.txt"
+    a = random.randint(-100, 100)
+    b = random.randint(-100, 100)
+    if debug : print(a,b)
+
+    # строка для добавления
+    df_new = pd.DataFrame(data = [[a,b]], columns=[0,1])
+    if debug : print("новый фрейм\n", df_new)
+
+    # если файла не будет, то заменим его этой пустой таблицей
+    df = pd.DataFrame(columns=[0, 1])
+    if debug : print("пустрой фрейм\n", df)
+
+    # открываем файл
+    if os.path.isfile(file):
+        if debug : print(f"Opening {file}")
+        df = pd.read_csv(file, sep=" ",header=None, index_col=None  )
+        # df.columns=["a","b"]
+        if debug : print("Прочитали из файла: \n", df)
+        #удалить последнюю строчку с разностью сумм
+        df = df.drop(index=df.index[-1])
+        if debug : print("Удалили последнюю строку: \n", df)
+    else:
+        print(f"нет файла {file}")
+
+    # df.append({"a":a,"b":b}, ignore_index=True)
+    df1=pd.concat([df, df_new])
+    if debug : print ("Получилась такая таблица:\n",df1)
+
+    # расчет сумм
+    sum0 = df1[0].sum()
+    sum1 = df1[1].sum()
+    delt = sum0 - sum1
+    if debug : print(f"Сумма0 {sum0},  Сумма1 {sum1} , разница {delt}")
+    #вставляем в таблицу строку с разностью сумм 
+    df_new = pd.DataFrame(data = [[delt,""]], columns=[0,1])
+    df1=pd.concat([df1, df_new])
+
+    if debug : print ("сохраняем в файл вот это:\n",df1)
+    df1.to_csv(file, sep=" ", index=False, header= False)
+
+
+
 # def connect_to_psql(**kwargs):
 #     ti = kwargs['ti']
 
@@ -160,6 +263,8 @@ with DAG(dag_id="new_dag", start_date=datetime(2022, 1, 1), schedule="*/1 * * * 
     python_task1 = PythonOperator(task_id="read_csv", python_callable = read_csv, do_xcom_push=True)
     python_task2 = PythonOperator(task_id="two_random_numbers", python_callable = two_random_numbers, do_xcom_push=False)
     python_task3 = PythonOperator(task_id="two_rnd_2file", python_callable = two_rnd_2file, do_xcom_push=False)
+    python_task4 = PythonOperator(task_id="two_rnd_2file_subtotal", python_callable = two_rnd_2file_subtotal, do_xcom_push=False)
+    python_task5 = PythonOperator(task_id="two_rnd_2file_subtotal_del", python_callable = two_rnd_2file_subtotal_del, do_xcom_push=False)
     # conn_to_psql_tsk = PythonOperator(task_id="conn_to_psql", python_callable = connect_to_psql)
     # read_from_psql_tsk = PythonOperator(task_id="read_from_psql", python_callable = read_from_psql)
 
@@ -185,4 +290,4 @@ with DAG(dag_id="new_dag", start_date=datetime(2022, 1, 1), schedule="*/1 * * * 
     # bash_task >> python_task >> python_task1 >> conn_to_psql_tsk >> read_from_psql_tsk >> sql_sensor \
     #     >> bash_task2 >> choose_best_model >> [accurate, inaccurate]
 
-    bash_task >> python_task >> python_task1 >> python_task2 >> python_task3
+    bash_task >> python_task >> python_task1 >> python_task2 >> python_task3 >> python_task4 >> python_task5
