@@ -214,47 +214,32 @@ def file_exists():
 
 
 def check_str_num(**context):
-    """g.* ... условие: ii.     Количество строк в файле минус одна последняя - соответствует кол-ву запусков"""
-
-    debug = True
+    # ti = kwargs['ti']
+    # tis_dagrun = context['ti'].get_dagrun().get_task_instances()
+    # failed_count = sum([True if ti.state == State.FAILED else False for ti in tis_dagrun])
+    # print(f"There are {failed_count} failed tasks in this execution")
+    count = len( context['ti'].get_dagrun().get_task_instances() )
+    print(f"Количетво Запусков = {count}")
     
     # https://stackoverflow.com/questions/70692446/how-do-i-check-if-all-my-tasks-in-an-airflow-dag-were-successful
-    DagRun = context["dag_run"]
-    TaskInstance = context["ti"]
-    # https://stackoverflow.com/questions/58741649/how-to-get-dag-status-like-running-or-success-or-failure
-    dag_id = TaskInstance.dag_id #task_id # 'new_dag'
-    if debug : print(f"dag_id = {dag_id}")
-    dag_runs = len(DagRun.find(dag_id=dag_id))
-    if debug : print(f"Количетво Запусков dag_runs = {dag_runs}")
-
-
-    file = file3 #r"./dags/file_12e.txt"
-
-    # открываем файл
-    if os.path.isfile(file):
-        if debug : print(f"Opening {file}")
-        df = pd.read_csv(file, sep=" ",header=None, index_col=None  )
-        # df.columns=["a","b"]
-        if debug : print("Прочитали из файла: \n", df.tail() )
-        #удалить последнюю строчку с разностью сумм
-        df = df.drop(index=df.index[-1])
-        if debug : print("Удалили последнюю строку: \n", df.tail() )
-        str_count = len(df)
-
-        # проверяем целевое условие
-        if str_count == dag_runs :
-            if debug : print(f"str_count({str_count}) == dag_runs({dag_runs}): \n")
-            return True
-        else:
-            if debug : print(f"str_count({str_count}) != dag_runs({dag_runs}): \n")
-            return False
-    else:
-        print(f"нет такого файла {file}")
-        return False
-
+    # https://stackoverflow.com/questions/70692446/how-do-i-check-if-all-my-tasks-in-an-airflow-dag-were-successful
+    dr: DagRun = context["dag_run"]
+    ti: TaskInstance = context["ti"]
     
+    # here we remove the task currently executing this logic
+    ti_summary = set([task.state for task in dr.get_task_instances() if task.task_id != ti.task_id])
+    print(f"ti_summary  = {ti_summary}")
 
+    # # Remove success state
+    # ti_summary.remove('success')
 
+    # https://stackoverflow.com/questions/58741649/how-to-get-dag-status-like-running-or-success-or-failure
+    # DagRun = context["dag_run"]
+    dag_id = 'new_dag'
+    # dag_runs = DagRun.find(dag_id=dag_id)
+    dag_runs = dr.find(dag_id=dag_id)
+    for dag_run in dag_runs:
+        print(f"dag_id={dag_id} .state = {dag_run.state}")
 
    
 
@@ -314,12 +299,12 @@ def check_str_num(**context):
 #         return "inaccurate"
 
 # A DAG represents a workflow, a collection of tasks
-with DAG(dag_id="new_dag", start_date=datetime(2022, 12, 11, 17, 0), schedule="* * * * *", max_active_runs=5 ) as dag:
+with DAG(dag_id="new_dag", start_date=datetime(2022, 1, 1), schedule="*/1 * * * *", max_active_runs=5 ) as dag:
     
     # accurate = DummyOperator(
     #     task_id = 'accurate'
     # )
-    # inaccurate = DummyOperator(s
+    # inaccurate = DummyOperator(
     #     task_id = 'inaccurate'
     # )
 
